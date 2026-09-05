@@ -14,14 +14,20 @@ async function authFetch(path, options = {}) {
   const token = getToken();
   const url = BACKEND_URL + path;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+  } catch (err) {
+    console.error('Network error:', err);
+    return { data: { error: 'Cannot reach server. It may be waking up — try again in 30 seconds.' }, ok: false, status: 0 };
+  }
 
   if (response.status === 401) {
     localStorage.removeItem('saldo_token');
@@ -30,8 +36,12 @@ async function authFetch(path, options = {}) {
     return { data: null, ok: false, status: 401 };
   }
 
-  const data = await response.json();
-  return { data, ok: response.ok, status: response.status };
+  try {
+    const data = await response.json();
+    return { data, ok: response.ok, status: response.status };
+  } catch (err) {
+    return { data: { error: 'Invalid response from server.' }, ok: false, status: response.status };
+  }
 }
 
 function formatDate(dateStr) {
